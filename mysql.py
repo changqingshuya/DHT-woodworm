@@ -4,7 +4,7 @@ import os
 
 def createDatabase():
     try:
-        conn=MySQLdb.connect(host='127.0.0.1',user='root',passwd='456',port=3306,charset="UTF8")
+        conn=MySQLdb.connect(host='127.0.0.1',user='root',passwd='mysql',port=3306,charset="UTF8")
         cur=conn.cursor()
         cur.execute('create database if not exists dht')
         conn.select_db('dht')
@@ -20,7 +20,7 @@ def createDatabase():
 
 def insertInfo(hash):
     try:
-        conn=MySQLdb.connect(host='127.0.0.1',user='root',passwd='456',port=3306,charset="UTF8")
+        conn=MySQLdb.connect(host='127.0.0.1',user='root',passwd='mysql',port=3306,charset="UTF8")
         cur=conn.cursor()
         conn.select_db('dht')
         sql="insert into hash_info(hash,info) values('%s','%s')"%(hash,"the info will added later")
@@ -33,7 +33,7 @@ def insertInfo(hash):
 
 def selectAllTable(table):
     try:
-        conn=MySQLdb.connect(host='127.0.0.1',user='root',passwd='456',port=3306,charset="UTF8")
+        conn=MySQLdb.connect(host='127.0.0.1',user='root',passwd='mysql',port=3306,charset="UTF8")
         cur=conn.cursor()
         conn.select_db('dht')
         sql="select * from "+table
@@ -53,7 +53,7 @@ def selectAllTable(table):
 
 def executeSQL(sql):
     try:
-        conn=MySQLdb.connect(host='127.0.0.1',user='root',passwd='456',port=3306,charset="UTF8")
+        conn=MySQLdb.connect(host='127.0.0.1',user='root',passwd='mysql',port=3306,charset="UTF8")
         cur=conn.cursor()
         conn.select_db('dht')
         cur.execute(sql)
@@ -68,7 +68,7 @@ def executeSQL(sql):
 #sql="update hash_info set hash_info.info='Captain's VgHD DVD 21 a0472 to a0501.iso' where hash_info.hash='5302c42cdf439cafa98f048e8367b3ff4829628e'".encode('utf-8')
 #print sql
 #executeSQL(sql)
-#createDatabase()       
+#createDatabase()
 #insertInfo("4cde5b50a8930315b479931f6872a3db59575366")
-selectAllTable("hash_info")
+#selectAllTable("hash_info")
 #selectAllTable("peerIP")

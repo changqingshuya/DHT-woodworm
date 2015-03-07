@@ -4,39 +4,34 @@ import threading
 import MySQLdb
 import logging
 import random
-
+import bson
+import time
+from db.torrentInfo import TorrentInfo
 '''
 one hash_info conrresponds  many peers
 '''
-fileLogger=logging.getLogger("btdht")
 class HashTable(object):
 
     def __init__(self):
         self.hashes = {}
         #the mutex to access the critical resource
         self.lock = threading.Lock()
-        try:
-            self.conn=MySQLdb.connect(host='127.0.0.1',user='root',passwd='456',port=3306,charset="UTF8")
-            self.cur=self.conn.cursor()
-            self.conn.select_db('dht')
-        except MySQLdb.Error,e:
-            print 'mysql error %d:%s'%(e.args[0],e.args[1])
-
 
     def add_hash(self, hash):
         #利用with可以防止异常的问题
         with self.lock:
             if hash not in self.hashes:
                 self.hashes[hash] = []
-                sql="insert into hash_info(hash,info) values('%s','%s')"%(hash.encode('hex'),"")
-
-                try:
-                    self.cur.execute(sql)
-                    self.conn.commit()
-                    fileLogger.debug('find new hash: %s'%hash.encode('hex').upper())
-                except MySQLdb.Error,e:
-                    logging.debug('insert duplicate hash into mysql')
-
+                logging.debug('inser a item into database')
+                torrent_info = TorrentInfo.objects(hashInfo=hash.encode('hex'))
+                if len(torrent_info) != 0:
+                    torrent_info[0].hotCount = torrent_info[0].hotCount + 1
+                    torrent_info[0].save()
+                else:
+                    TorrentInfo(hashInfo=hash.encode('hex'), hotCount=1,creation_date=time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time())),current_date=time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))).save()
+            else:
+                torrent_info = TorrentInfo.objects(hashInfo=hash.encode('hex'))
+                torrent_info[0].update(hotCount=torrent_info[0].hotCount + 1)
 
     def remove_hash(self, hash):
         with self.lock:
@@ -88,7 +83,7 @@ class HashTable(object):
                 file.write(hash.encode('hex')+"\n\r")
         '''
         try:
-            conn=MySQLdb.connect(host='127.0.0.1',user='root',passwd='456',port=3306,charset="UTF8")
+            conn=MySQLdb.connect(host='127.0.0.1',user='root',passwd='mysql',port=3306,charset="UTF8")
             cur=conn.cursor()
             conn.select_db('dht')
             for hash in self.hashes.keys():

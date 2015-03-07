@@ -7,10 +7,11 @@ import threading
 import time
 import logging
 import re,urllib2
+from .defines import SELF_LAN_IP
 from .bencode import bencode
 from .utils import random_trans_id, get_version 
 
-logger = logging.getLogger("std")
+logger = logging.getLogger(__name__)
 
 class Node(object):
     """ Represent a DHT node """
@@ -18,6 +19,7 @@ class Node(object):
         self._id = _id
         self.host = host
         self.port = port
+        self.LANip=SELF_LAN_IP
         '''
         each node will create a lot of message. and each message had it's own trans. for each trans
         it will have the trans_id, message_type,hash_info,access_time
@@ -68,27 +70,19 @@ class Node(object):
             message["t"] = trans_id
         #the communication message format of the DHT is the "bencode"
         encoded = bencode(message)
-
         if sock:
             if lock:
                 with lock:
                     try:
                         sock.sendto(encoded, (self.host, self.port))
                     except:
-                        logger.error('send udp error')
+                        logger.error('send upd error')
             else:
                 try:
                     sock.sendto(encoded, (self.host, self.port))
                 except:
-                    logger.error('send udp error')
-            '''
-        if sock:
-            sock.sendto(encoded, (self.host, self.port))
-        else:
-            logger.error('send udp error')
-            '''
-
-
+                    logger.error('send upd error')
+        
     def ping(self, socket=None, sender_id=None, lock=None):
         """ Construct query ping message """
         trans_id = self.add_trans("ping")

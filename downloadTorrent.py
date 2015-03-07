@@ -6,6 +6,10 @@
 import urllib,urllib2,os,MySQLdb,gzip
 from io import BytesIO
 from btdht import Parser
+from db.torrentInfo import TorrentInfo
+from torrentparse import parse_torrent_file
+import datetime
+
 
 def save(filename, content):
 
@@ -38,87 +42,125 @@ def getTorrents(info_hash):
     #print "downloading+"+info_hash+".torrent success"
     return True
 
-def getAllTorrents(table):
+def getAllTorrents():
 
     try:
         os.mkdir("torrents")
-    except WindowsError,e:
+    except Exception,e:
         print e
 
     try:
-        conn=MySQLdb.connect(host='127.0.0.1',user='root',passwd='456',port=3306,charset="UTF8")
-        cur=conn.cursor()
-        conn.select_db('dht')
-        sql="select * from "+table
-        count=cur.execute(sql)
-        print "thers are %s row in table"% count
-        result=cur.fetchall()
+        from mongoengine import connect
+        from pymongo import ReadPreference
+        connect('torrentinfo-db', host='127.0.0.1:27001', replicaSet='rs', read_preference=ReadPreference.SECONDARY)
+        #connect('torrentinfo-db')
+        #conn=MySQLdb.connect(host='127.0.0.1',user='root',passwd='mysql',port=3306,charset="UTF8")
+        #cur=conn.cursor()
+        #conn.select_db('dht')
+        #sql="select * from "+table + " where hash_info.info = ''"
+        #count=cur.execute(sql)
+        #print "thers are %s row in table"% count
+        #result=cur.fetchall()
+        result = TorrentInfo.objects(name=None,status=None)
+        print len(result)
         i=0
         for r in result:
+            try:
+                #设置是否已经爬取过该资源
+                r.status = 1
+                r.save()
+                #the torrent info is empty
+                if r.name!=None and r.status != None:
+                    print 'torrent exist'
+                    continue
 
-            #the torrent info is empty
-            if r[1]!="":
-                print 'torrent exist'
-                continue
-            
-            #download the torrent file success
-            state=getTorrents(r[0])
-            
-            if state:
-                #count the torrent file
-                i=i+1
+                #download the torrent file success
+                print r.hashInfo
+                state=getTorrents(r.hashInfo)
 
-                try:
-                    parser=Parser.Parser(".\\torrents\\"+r[0]+".torrent")
-                except :
-                    print 'bt file error'
-                    
-                name=parser.getName()
-                print '============================================================='
-                print r[0]
-                #print name
-                #update the tuple
-                #print r[0]
-                encoding=parser.getEncoding()
-                comment=parser.getComments()
-                #print comment.decode('utf-8')
-                try:
-                    
-                    if encoding:
-                        print name
-                        print encoding
-                        print name.decode(encoding)+" "+encoding
-                        sql="update hash_info set hash_info.info='%s' where hash_info.hash='%s'"%(name.decode(encoding),r[0].decode('utf-8'))
-                        #print sql
-                        cur.execute(sql)
+                if state:
+                    #count the torrent file
+                    i=i+1
+                    try:
+                        print ".\\torrents\\"+r.hashInfo+".torrent"
+                        result = parse_torrent_file(".\\torrents\\"+r.hashInfo+".torrent")
+                        print result['name']
+                        print result['description']
+                        print result['file_list']
+                        print result['creation_date']
+                        print result['tracker_url']
+                        print result['client_name']
+                    except Exception,e:
+                        print 'bt file error'+e.message
+                        r.save()
+                        continue
+                    name=result['name']
+                    description = result['description']
+                    file_list = str(result['file_list'])
+                    files = ""
+                    for f in result['file_list']:
+                        print f[0]
+                        files += str(f[0])
+                    print files
+
+                    creation_date = result['creation_date']
+                    tracker_url = result['tracker_url']
+                    client_name = result['client_name']
+                    print r.hashInfo
+                    encoding = result['encoding']
+                    if encoding is not None:
+                        try:
+                            if name:
+                                r.name = name.encode(encoding)
+                            if description:
+                                r.description = description.encode(encoding)
+                            if file_list:
+                                r.file_list = file_list
+                            if creation_date:
+                                r.creation_date = datetime.datetime.strptime(creation_date, "%Y-%m-%dT%H:%M:%S")
+                            if tracker_url:
+                                r.tracker_url = tracker_url.encode(encoding)
+                            if client_name:
+                                r.client_name = client_name.encode(encoding)
+                            r.files = files
+                            r.save()
+                        except Exception,e:
+                            print 'mongodb or decode error'+e.message
+                            r.save()
+                            continue
                     else:
-                        print name
-                        print name.decode('utf-8')+" "+encoding
-                        sql="update hash_info set hash_info.info='%s' where hash_info.hash='%s'"%(name.decode('utf-8'),r[0].decode('utf-8'))
-                        #print sql
-                        cur.execute(sql)
-                    conn.commit()
-                except :
-                    print 'mysql or decode error'
-            else:
-                try:
-                    #torrent file download failed
-                    sql="update hash_info set hash_info.info='%s' where hash_info.hash='%s'"%("error",r[0].decode('utf-8'))
-                    cur.execute(sql)
-                    conn.commit()
-                except:
+                        try:
+                            if name:
+                                r.name = name
+                            if description:
+                                r.description = description
+                            if file_list:
+                                r.file_list = file_list
+                            if creation_date:
+                                r.creation_date = datetime.datetime.strptime(creation_date, "%Y-%m-%dT%H:%M:%S")
+                            if tracker_url:
+                                r.tracker_url = tracker_url
+                            if client_name:
+                                r.client_name = client_name
+                            r.files = files
+                            r.save()
+                        except Exception,e:
+                            print 'mongodb or decode error'+e.message
+                            continue
+                else:
                     print 'error'
+            except Exception,e:
+                    print 'error2'
         
-        cur.close()
-        conn.close()
-    except MySQLdb.Error,e:
-        print 'mysql error %d:%s'%(e.args[0],e.args[1])
+    except Exception,e:
+        print 'mongodb error : '+e.message
+
         
     print 'the torrent files :'+str(i)    
 if __name__=="__main__":
 
-    getAllTorrents("hash_info")
-'''
-    info_hash="5302C30A88347F10E1F0A5BF334A8AC85D545AC0"
-    getTorrents(info_hash)
-'''
+    getAllTorrents()
+
+    #info_hash="640FE84C613C17F663551D218689A64E8AEBEABE"
+    #getTorrents(info_hash)
+
