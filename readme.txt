@@ -1,13 +1,12 @@
-this python(2.7.1) program is attended to get the magnet URIs from DHT network.also it need MySQL to maintain the magnet URIs.
+实现了通过dht协议抓取磁力链接，下载种子文件并解析种子文件。解析的数据保存在mongodb中。便于solr的查询。
 
-HOW TO RUN THE PROGRAM
+该项目是通过dht协议抓取磁力链接，通过磁力链抓取种子文件，解析种子文件信息进行保存入库。
 
-0.working on window7
-1.install python 2.7.1
-2.install mysql (set the charset to utf-8)
-3.install the connector betweent python and mysql "the connector can download from www.python.org"
-4.run the "mysql.py" to create database(set the "passwd" ,"user"and "port" by your own condition)
-5.run the "wooooooodworm.py" to get magnet URI from network (set the "threadNumb" and "workingTime" by yourself)
-6.run the "downloadTorrent.py" to get the torrnet file from the "zoink.it"(set the "passwd" ,"user"and "port" on your own condition)
-7.check the "./torrents" file, it contains the torrents that you get from network.
-8.check the database table "hash_info",it maintain the magnet info that you get from network 
+一个磁力链和种子文件搜索功能就实现啦！
+
+
+以下给出使用mongodb作为数据库，solr作为搜索引擎的解决方案，详情参考blog：使用mongodb作为数据源搭建solr搜索引擎之创建同步索引实现------>转送门http://blog.csdn.net/liuchangqing123/article/details/44124251
+
+
+有什么问题，请到csdn博客留言。
+
